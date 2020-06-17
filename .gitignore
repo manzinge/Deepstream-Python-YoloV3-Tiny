@@ -1,0 +1,12 @@
+
+
+#Ignore all Videos/Images
+**/*.png
+**/*.mp4
+**/*.h264
+
+#Ignore all Weights / NN Files
+**/*.cfg
+**/*.onnx
+**/*.weights
+**/*.engine

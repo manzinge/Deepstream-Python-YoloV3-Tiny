@@ -1,0 +1,16 @@
+Prequisites:
+- DeepStreamSDK 5.0
+- Jetpack 4.4
+- Python 3.6
+- Gst-python
+
+To run the test app:
+  $ python3 deepstream_test_1.py <h264_elementary_stream>
+
+Q: What if I want to use more than 1 Class
+A: Modify the PGIE_CLASS Ids in the deepstream_test_1.py, the object and the number
+   of classes in the config (dstest1_pgie_config-yolo.txt)
+
+Q: My Stream is lagging 
+A: Set the sink property to 0 which will result in smoother framerate
+   but also give you slightly off boxes (on the display)

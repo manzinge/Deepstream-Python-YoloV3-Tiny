@@ -1,0 +1,1 @@
+echo ffmpeg -i Gurkenvideo_02.mp4 -an -vcodec libx264 -crf 23 Gurkenvideo_02.h264

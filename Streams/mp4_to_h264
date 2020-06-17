@@ -1,0 +1,1 @@
+echo ffmpeg -i MP4VIDEO -an -vcodec libx264 -crf 23 H264VIDEO
