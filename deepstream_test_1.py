@@ -35,7 +35,17 @@ import pyds
 
 PGIE_CLASS_ID_PICKLE = 0
 objectsAtFrame = []
+PickleBoxArr = []
 
+minRange = 0.9
+maxRange = 1.1
+
+class PickleBox:
+    def __init__(self, left, top, width, height):
+        self.left = left
+        self.top = top
+        self.width = width
+        self.height = height
 
 def osd_sink_pad_buffer_probe(pad,info,u_data):
     frame_number=0
@@ -66,7 +76,7 @@ def osd_sink_pad_buffer_probe(pad,info,u_data):
             frame_meta = pyds.NvDsFrameMeta.cast(l_frame.data)
         except StopIteration:
             break
-
+        # pyds.nvds_clear_obj_meta_list(frame_meta, frame_meta.obj_meta_list)
         frame_number=frame_meta.frame_num
         num_rects = frame_meta.num_obj_meta
         l_obj=frame_meta.obj_meta_list
@@ -77,8 +87,33 @@ def osd_sink_pad_buffer_probe(pad,info,u_data):
                 obj_meta=pyds.NvDsObjectMeta.cast(l_obj.data)
             except StopIteration:
                 break
-            obj_counter[obj_meta.class_id] += 1
-            obj_meta.rect_params.border_color.set(0.0, 0.0, 1.0, 0.0)
+
+
+            
+            currPickle = PickleBox(obj_meta.rect_params.left, obj_meta.rect_params.top, obj_meta.rect_params.width, obj_meta.rect_params.height)
+            if currPickle.left > frame_meta.source_frame_width * minRange:
+                obj_counter[obj_meta.class_id] += 1
+                knownPickle = False
+                for foundPickle in PickleBoxArr:
+                    if(foundPickle.left * minRange <= currPickle.left <= foundPickle.left * maxRange
+                    and foundPickle.top * minRange <= currPickle.top <= foundPickle.top * maxRange
+                    and foundPickle.width * minRange <= currPickle.width <= foundPickle.width * maxRange
+                    and foundPickle.height * minRange <= currPickle.height <= foundPickle.height * maxRange):
+                        knownPickle = True
+                        break
+                if knownPickle:
+                    #BLUE
+                    obj_meta.rect_params.border_color.set(0.0, 254.0, 10.0, 0.0)
+
+                    #BLACK
+                    # obj_meta.rect_params.border_color.set(0.0, 0.0, 0.0, 255.0)
+                else:
+                    PickleBoxArr.append(currPickle)
+            else:
+                obj_meta.rect_params.border_color.set(0.0, 0.0, 0.0, 255.0)
+
+
+            # print("Left = {}, Top={}, width={}, heigth={}".format(obj_meta.rect_params.left,obj_meta.rect_params.top,obj_meta.rect_params.width,obj_meta.rect_params.height))
             try: 
                 l_obj=l_obj.next
             except StopIteration:
@@ -95,7 +130,7 @@ def osd_sink_pad_buffer_probe(pad,info,u_data):
         # memory will not be claimed by the garbage collector.
         # Reading the display_text field here will return the C address of the
         # allocated string. Use pyds.get_string() to get the string content.
-        py_nvosd_text_params.display_text = "Frame Number={} Number of Pickles={}".format(frame_number, obj_counter[PGIE_CLASS_ID_PICKLE])
+        py_nvosd_text_params.display_text = "Frame Number={} Number of Pickles (current Frame)={} Number of total Pickles={}".format(frame_number, obj_counter[PGIE_CLASS_ID_PICKLE],len(PickleBoxArr))
         objectsAtFrame.append(obj_counter[PGIE_CLASS_ID_PICKLE])
         # Now set the offsets where the string should appear
         py_nvosd_text_params.x_offset = 10
@@ -112,7 +147,7 @@ def osd_sink_pad_buffer_probe(pad,info,u_data):
         # set(red, green, blue, alpha); set to Black
         py_nvosd_text_params.text_bg_clr.set(0.0, 0.0, 0.0, 1.0)
         # Using pyds.get_string() to get display_text as string
-        print(pyds.get_string(py_nvosd_text_params.display_text))
+        # print(pyds.get_string(py_nvosd_text_params.display_text))
         pyds.nvds_add_display_meta_to_frame(frame_meta, display_meta)
         try:
             l_frame=l_frame.next
@@ -122,11 +157,7 @@ def osd_sink_pad_buffer_probe(pad,info,u_data):
     return Gst.PadProbeReturn.OK	
 
 def main(args):
-    # Check input arguments
-    if len(args) != 2:
-        sys.stderr.write("usage: %s <media file or uri>\n" % args[0])
-        sys.exit(1)
-
+    videoFile = "Streams/Video_18.h264"
     # Standard GStreamer initialization
     GObject.threads_init()
     Gst.init(None)
@@ -194,8 +225,8 @@ def main(args):
     if not sink:
         sys.stderr.write(" Unable to create egl sink \n")
 
-    print("Playing file %s " %args[1])
-    source.set_property('location', args[1])
+    print("Playing file %s " %videoFile)
+    source.set_property('location', videoFile)
     streammux.set_property('width', 1280)
     streammux.set_property('height', 720)
     streammux.set_property('batch-size', 1)
@@ -260,9 +291,8 @@ def main(args):
         pass
     # cleanup
     pipeline.set_state(Gst.State.NULL)
-
+    print(len(PickleBoxArr))
     # plotGraph(objectsAtFrame)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
-
